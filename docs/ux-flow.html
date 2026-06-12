@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EasyClipper — How It Works</title>
+<style>
+  :root {
+    --bg: #0f1115; --card: #1a1d24; --ink: #e8eaed; --muted: #9aa0aa;
+    --green: #4caf50; --blue: #2196f3; --gold: #ffd700; --line: #2a2e37;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased; overflow: hidden;
+  }
+  #deck { height: 100%; display: flex; align-items: center; justify-content: center; }
+  .slide { display: none; width: min(900px, 92vw); max-height: 88vh; animation: fade .35s ease; }
+  .slide.active { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .kicker { font-size: .8rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: .9rem; }
+  h1 { font-size: clamp(1.8rem, 4.5vw, 3.2rem); line-height: 1.08; margin-bottom: 1rem; }
+  h2 { font-size: clamp(1.4rem, 3.5vw, 2.3rem); line-height: 1.12; margin-bottom: 1rem; }
+  p.lead { font-size: clamp(1rem, 2.2vw, 1.3rem); color: var(--muted); line-height: 1.6; max-width: 42ch; }
+  .step-num { display: inline-flex; align-items: center; justify-content: center; width: 2.4rem; height: 2.4rem;
+    border-radius: 50%; background: var(--blue); color: #fff; font-weight: 700; font-size: 1.1rem; margin-bottom: 1.1rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 1.4rem 1.6rem; margin-top: 1.4rem; }
+  .mock { background: #fff; color: #333; border-radius: 10px; padding: 1rem; font-size: .9rem; line-height: 1.7; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+  .word { padding: 1px 2px; border-radius: 3px; cursor: default; }
+  .w-sel { background: #90EE90; font-weight: 700; }
+  .w-start { border: 2px solid green; }
+  .w-end { border: 2px solid red; }
+  .w-play { background: var(--gold); font-weight: 700; }
+  .row { display: flex; gap: 1rem; align-items: stretch; }
+  .panel { flex: 0 0 230px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: .6rem; color: #333; }
+  .panel h4 { font-size: .8rem; margin-bottom: .5rem; color: #333; }
+  .clip { background: #fafafa; border: 1px solid #e0e0e0; border-radius: 6px; padding: .4rem .5rem;
+    font-size: .75rem; margin-bottom: .4rem; display: flex; justify-content: space-between; align-items: center; }
+  .clip .play { color: var(--green); font-weight: 700; }
+  .tag { display: inline-block; font-size: .65rem; padding: .15rem .5rem; border-radius: 999px; margin-left: .5rem; vertical-align: middle; }
+  .tag.now { background: rgba(76,175,80,.18); color: #7fe083; border: 1px solid rgba(76,175,80,.4); }
+  .tag.soon { background: rgba(33,150,243,.16); color: #79c0ff; border: 1px solid rgba(33,150,243,.4); }
+  ul.plain { list-style: none; margin-top: 1rem; }
+  ul.plain li { padding: .45rem 0 .45rem 1.8rem; position: relative; color: var(--muted); font-size: 1.05rem; }
+  ul.plain li::before { content: "→"; position: absolute; left: 0; color: var(--blue); }
+  .flow { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.6rem; }
+  .flow .node { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: .7rem 1rem; font-size: .92rem; display: flex; align-items: center; gap: .5rem; }
+  .flow .arrow { color: var(--muted); align-self: center; }
+  .dot { width: .55rem; height: .55rem; border-radius: 50%; }
+  footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.4rem; font-size: .85rem; color: var(--muted); }
+  .nav button { background: var(--card); border: 1px solid var(--line); color: var(--ink); border-radius: 8px; padding: .5rem .9rem; cursor: pointer; font-size: .9rem; }
+  .nav button:hover { border-color: var(--blue); }
+  .progress { display: flex; gap: .35rem; }
+  .progress span { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+  .progress span.on { background: var(--blue); }
+  .hint { color: #5b616b; font-size: .78rem; }
+  .badge { display: inline-block; background: rgba(33,150,243,.16); color: #79c0ff; border: 1px solid rgba(33,150,243,.4); border-radius: 999px; padding: .2rem .7rem; font-size: .78rem; margin-bottom: 1.2rem; }
+</style>
+</head>
+<body>
+<div id="deck">
+
+  <section class="slide active">
+    <div class="badge">Runs 100% in your browser · nothing uploaded</div>
+    <h1>EasyClipper</h1>
+    <p class="lead">Turn a recording into clickable text, then cut and rearrange audio by clicking words — like a DJ for spoken word.</p>
+    <p class="hint" style="margin-top:2rem">Use ← / → arrow keys (or the buttons below) to move through this walkthrough.</p>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">The journey, end to end</div>
+    <h2>Six steps, all on your computer</h2>
+    <div class="flow">
+      <div class="node"><span class="dot" style="background:var(--blue)"></span>Upload audio</div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="dot" style="background:var(--blue)"></span>Auto-transcribe</div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="dot" style="background:var(--gold)"></span>Click two words</div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="dot" style="background:var(--green)"></span>Trim &amp; speed</div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="dot" style="background:var(--green)"></span>Save to a track</div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="dot" style="background:var(--green)"></span>Export one file</div>
+    </div>
+    <div class="card">
+      <p class="lead" style="max-width:none">No account. No internet round-trips. No cost. Your audio never leaves the machine — the only thing ever downloaded is the speech-recognition AI, once.</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="step-num">1</div>
+    <h2>Drop in your audio</h2>
+    <p class="lead">Drag any audio (or video) file onto the upload screen. EasyClipper fingerprints it so that if you ever open the same file again, it skips straight to the transcript.</p>
+  </section>
+
+  <section class="slide">
+    <div class="step-num">2</div>
+    <h2>It transcribes itself</h2>
+    <p class="lead">The Whisper AI runs <em>inside the browser</em> and writes out every spoken word with an exact timestamp. The first run downloads the AI model (~150&nbsp;MB, a few minutes). After that, it's instant.</p>
+  </section>
+
+  <section class="slide">
+    <div class="step-num">3</div>
+    <h2>Cut by clicking words</h2>
+    <p class="lead">Click one word to start a highlight, click another to end it. The audio between them is pulled out instantly — no waveform scrubbing.</p>
+    <div class="card mock">
+      <span class="word">the</span>
+      <span class="word">interview</span>
+      <span class="word">really</span>
+      <span class="word w-sel w-start">starts</span>
+      <span class="word w-sel">to</span>
+      <span class="word w-sel">get</span>
+      <span class="word w-sel w-end">interesting</span>
+      <span class="word">when</span>
+      <span class="word">she</span>
+      <span class="word">says</span>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="step-num">4</div>
+    <h2>Polish the clip</h2>
+    <p class="lead">Open the Detail View to fine-trim the ends with a slider, or speed up part of the clip (1.5×–4×) to tighten a slow patch. The preview updates as you go.</p>
+    <ul class="plain">
+      <li>Trim slider for exact in/out points</li>
+      <li>Speed edits on any sub-section</li>
+      <li>Live preview player</li>
+    </ul>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">DJ mode</div>
+    <div class="step-num">5</div>
+    <h2>Save clips into tracks <span class="tag now">Available now</span></h2>
+    <p class="lead">Press <strong>Save to track</strong> and the clip lands in a panel on the right. Keep its trim and speed edits baked in. Build up as many clips as you like.</p>
+    <div class="card">
+      <div class="row">
+        <div class="mock" style="flex:1">
+          <span class="word">…</span>
+          <span class="word w-sel w-start">starts</span>
+          <span class="word w-sel">to</span>
+          <span class="word w-sel w-end">get</span>
+          <span class="word">interesting…</span>
+          <div style="margin-top:.8rem; font-size:.75rem; color:#666">▶ preview · <span style="color:var(--green);font-weight:700">Save to track</span> · Detail View</div>
+        </div>
+        <div class="panel">
+          <h4>Track 1 · 2 clips · 6.4s</h4>
+          <div class="clip"><span>"starts to get…"</span><span><span class="play">▶</span> 2.5s</span></div>
+          <div class="clip"><span>"she says that…"</span><span><span class="play">▶</span> 3.9s</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">DJ mode</div>
+    <div class="step-num">6</div>
+    <h2>Drag, reorder, layer <span class="tag soon">Coming next</span></h2>
+    <p class="lead">Drag clips into any order, or between multiple tracks — arrange a story out of scattered moments. Then export each track as a single audio file.</p>
+    <div class="card">
+      <div class="row">
+        <div class="panel" style="flex:1">
+          <h4>Track 1 — Highlights</h4>
+          <div class="clip"><span>⠿ "starts to get…"</span><span>2.5s</span></div>
+          <div class="clip"><span>⠿ "the key point…"</span><span>4.1s</span></div>
+        </div>
+        <div class="panel" style="flex:1">
+          <h4>Track 2 — B-roll</h4>
+          <div class="clip"><span>⠿ "background on…"</span><span>3.3s</span></div>
+        </div>
+      </div>
+      <p class="hint" style="margin-top:1rem">⠿ = grab handle · drag up/down or across tracks</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <div class="step-num">✓</div>
+    <h2>Export one clean file <span class="tag soon">Coming next</span></h2>
+    <p class="lead">Each track stitches its clips together — in order, with smooth joins — into a single downloadable WAV. A new edit, assembled entirely from clicks on a transcript.</p>
+  </section>
+
+  <section class="slide">
+    <div class="kicker">In one line</div>
+    <h2>Edit audio the way you read</h2>
+    <p class="lead">If you can highlight a sentence, you can cut a clip. If you can drag a list, you can arrange a montage. No timeline, no waveform, no upload — and your recordings stay private on your own machine.</p>
+    <p class="hint" style="margin-top:2rem">EasyClipper · local-first audio clipping · this deck lives in <code>docs/ux-flow.html</code></p>
+  </section>
+
+</div>
+
+<footer>
+  <div class="nav">
+    <button id="prev">← Prev</button>
+    <button id="next">Next →</button>
+  </div>
+  <div class="progress" id="dots"></div>
+  <div class="hint" id="counter">1 / 10</div>
+</footer>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dots = document.getElementById('dots');
+  const counter = document.getElementById('counter');
+  let i = 0;
+  slides.forEach((_, n) => { const s = document.createElement('span'); if (n === 0) s.className = 'on'; dots.appendChild(s); });
+  const dotEls = Array.from(dots.children);
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, n2) => s.classList.toggle('active', n2 === i));
+    dotEls.forEach((d, n2) => d.classList.toggle('on', n2 === i));
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+  }
+  document.getElementById('next').onclick = () => show(i + 1);
+  document.getElementById('prev').onclick = () => show(i - 1);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); show(i + 1); }
+    if (e.key === 'ArrowLeft') show(i - 1);
+    if (e.key === 'Home') show(0);
+    if (e.key === 'End') show(slides.length - 1);
+  });
+</script>
+</body>
+</html>
